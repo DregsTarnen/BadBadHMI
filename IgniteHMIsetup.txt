@@ -1,0 +1,313 @@
+######################################################
+SOFTWARE BUILD SPECS:
+CentOS8 (minimal install)
+Xorg
+Motif Window Manager
+nano
+wget
+curl
+net-tools
+lsof
+bash-completion
+urw-fonts
+liberation-fonts
+xterm
+google-chrome-stable_current_x86_64
+xinput_calibrator-0.7.5-3.el6.x86_64
+vino-server
+dconf-editor
+####################################################
+POST MINIMAL INSTALL SETUP:
+after installing the minimal CentOS8 do the following:
+[root@comp]$ dnf check-update
+[root@comp]$ dnf update
+[root@comp]$ dnf install tar openmotif nano wget curl net-tools lsof bash-completion Xorg urw-fonts liberation-fonts xterm vino-server dconf-editor
+drink some coffee..........
+[root@comp]$ wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
+[root@comp]$ dnf localinstall goggle-chrome-stable_current_x86_64.rpm
+[root@comp]$ wget http://download-ib01.fedoraproject.org/pub/epel/6/x86_64/Packages/x/xinput_calibrator-0.7.5-3.el6.x86_64.rpm
+[root@comp]$ dnf localinstall xinput_calibrator-0.7.5-3.el6.x86_64.rpm
+####################################################
+THE NANO OPTION:
+
+some not all may not want to use vim :(
+
+make nano default:
+
+[root@comp]$ echo "set nowrap" >>/etc/nanorc
+[root@comp]$ cat <<EOF >>/etc/profile.d/nano.sh
+>export VISUAL="nano"
+>export EDITOR="nano"
+>EOF
+
+don't type the karats they show up until you type the
+ end of file command
+#####################################################
+INIT MWM(MOTIF WINDOW MANAGER):
+
+[root@comp]$ nano /etc/X11/xinit/Xclients
+at the very last four lines of the file change to
+look like the following:
+
+     if [ -x /usr/bin/mwm ] ; then
+	  xset dpms 0 0 0 && xset s noblank && xset s off
+	  exec /usr/bin/mwm -multiscreen
+     fi
+}
+
+using startx command in the terminal will bring up an mwm session
+
+######################################################
+MAKE AUTOLOGIN POSSIBLE AT POWER UP:
+
+we want to autolaunch our HMIs and we don't want our
+HMI users to have root access so we will auto log them
+into our HMI user
+
+[root@comp]$ nano /etc/systemd/system/getty.target.wants/getty@tty1.service
+change the line that starts with ExecStart. Dont delete the old one
+just comment it out and put this line below it:
+
+ExecStart=-/sbin/agetty --noissue --autologin <put username here> %I $TERM
+
+NO KARATS THAT IS JUST A SPACE SAVER SHOWING WHERE YOU PUT THE USER!!!!!!
+
+#########################################################
+ALLOW VNC ACCESS:
+
+the only living part of the Gnome desktop on this client
+is the dconf-editor. The developers of Vino didn't make 
+it a stand alone package. you need Gnomes config package
+to configure it :( Oh well
+with an mwm session open type in the xterm window:
+[root@comp]$ dconf-editor
+a graphical dconf-editor window will open and you will 
+want to choose: /org/gnome/desktop/remote-access
+there you will find various options to choose from for 
+the use of the vino-server, knock yourself out but you must
+make sure that 'require-encryption' is set to false
+
+#########################################################
+SETUP THE IGNITION HMI:
+
+with an mwm session open type in the xterm window:
+[user@comp]$ google-chrome
+
+with the browser open enter http://localhost:8088
+and download the visionclientlauncher for linux
+[root@comp]$ cd ~/Downloads
+[root@comp]$ tar -xf visionclientlauncher.tar.gz -C /home/rfphmi
+[root@comp]$ cd /home/ignitehmi/visionclientlauncher/app
+[root@comp]$ ./visionclientlauncher.sh
+when the launcher opens manually input your gateway
+address and then select the project you would like to add
+click to run fullscreen. this will create the files we 
+need in the .ignition directory
+
+we need to set the HMI to always run fullscreen
+[root@comp]$ nano /home/ignitehmi/.ignition/clientlauncher-data/vision-client-launcher.json
+change the entry "window.mode" to say "fullscreen":
+"window.mode": "fullscreen",
+#########################################################
+
+#########################################################
+#ALERT: Some older ELO touchscreens will not calibrate
+# without additional modification- SEE BELOW
+#########################################################
+[root@comp]$ cd /usr/share/X11/xorg.conf.d
+[root@comp]$ ls
+verify these files exist: 10-evdev.conf, 40-libinput.conf
+if the files do not exist:
+[root@comp]$ yum install xorg-x11-drv-evdev xorg-x11-drv-libinput
+if files exist open 40-libinput.conf for editing
+find the line in the section for the pointer device class that says:
+Driver	"libinput" change it to Driver	"evdev"
+reboot and attempt to calibrate the screen with xinput_calibrator
+#########################################################
+CHANGE THE BACKGROUND AND FOREGROUND COLOR OF THE XTERM WINDOW
+
+If you find the coloring of the Xterm window difficult to read or hard on your eyes
+or even simply unpleasant do the following:
+
+[root@comp]$ nano /etc/X11/Xresources
+add the following 2 lines:
+
+*background: Black
+*foreground: Green
+*faceName: DejaVu Sans Mono Book
+*faceSize: 22
+
+You can put in your own colors
+
+##########################################################
+ADD SNMP MONITORING
+install service:
+[root@comp]$ dnf install net-snmp net-snmp-libs net-snmp-utils php-cli xinetd
+enable service:
+[root@comp]$ systemctl enable —now snmpd
+verify service:
+[root@comp]$ systemctl status snmpd
+[root@comp]$ nano /etc/snmp/snmpd.conf
+
+The following is the current SNMPD config for Observium:
+—————————————————————————————————————————
+
+#extend nfs-server /bin/cat /proc/net/rpc/nfsd
+#extend zfs /etc/snmp/zfs-linux
+
+#this create a SNMPv1/SNMPv2c community named "my_servers"
+#and restricts access to LAN adresses 192.168.0.0/16 (last two 0's are ranges)
+#rocommunity public localhost
+#setup info
+syslocation "A Place"
+syscontact "Some Guy <someguy@anemail.com>"
+#open up
+agentAddress udp:161
+#run as
+agentuser root
+#dont log connection from UDP:
+dontLogTCPWrappersConnects yes
+#fix for larger than 2TB disks (raid!)
+realStorageUnits 0
+trap2sink localhost:162 public
+#disk checks
+#disk PATH [MIN=100000]
+#Check the/partition and make sure it contains at least 10 megs.
+#disk/10000
+includeAllDisks 10%
+
+—————————————————————————————————————————
+
+Config ntp servers
+[root@comp]$ nano /etc/chrony.conf
+add:
+your DNS server
+
+Config Observium unix agent
+[root@comp]$ mkdir -p /usr/lib/observium_agent/local
+Copy xinetd config from Observium
+[root@comp]$ scp /opt/observium/scripts/observium_agent_xinetd user@your_server:/etc/xinetd.d/observium_agent_xinetd
+You will find a line in the config file that says
+# configure the IPv[4|6] address(es) of your Observium server here:
+below this line  you will put your Observium server’s IP right after:  ‘only_from		=‘
+Copy agent from Observium
+[root@comp]$ scp /opt/observium/scripts/observium_agent user@your_server:/usr/bin/observium_agent
+Create ntpd script
+[root@comp]$ nano /usr/lib/observium_agent/local/ntpd
+
+This file is based off Observium’s original ntpd script it has been slightly modified to get the values we
+wanted from CentOS  8 Chrony ntp service and we only changed the values we wanted to recieve. 
+THE FOLLOWING SCRIPT WILL ONLY WORK WITH CHRONY! 
+
+——————————————————————————————————————————————-
+
+#!/usr/bin/env php
+<?php
+
+    ///////////////////////////////////////////////////////////////////////////////////////
+    ///
+    //      A small script to grab the NTPD Server statistics from a NTPD server
+    //      Needed commands: php, ntpd, ntpq, ntpdc
+    ///
+    //      Version 1.3 By:
+    //              All In One - Dennis de Houx <info@all-in-one.be>
+    ///modified late summer 2020 by some Hooligan
+    ///////////////////////////////////////////////////////////////////////////////////////
+
+
+    // START SETTINGS ///
+
+        $ntpq           = "chronyc"; //i changed this line
+        $ntpdc          = "chronyc"; //i changed this line
+
+    // END SETTINGS ///
+
+
+
+    ///
+    // DO NOT EDIT BENEATH THIS LINE
+    ///i did edit beneath this line i had to
+    ///////////////////////////////////////////////////////////////////////////////////////
+
+        $cmd    = shell_exec($ntpq." tracking"); //i changed this line
+        $cmd2   = shell_exec($ntpdc." ntpdata"); //i changed this line
+        $vars   = array();
+        $vars2  = array();
+        $vars   = explode(',', $cmd);
+        //$vars2        = eregi_replace(' ', '', $cmd2);
+        $vars2  = preg_replace('/ /', '', $cmd2);
+        $vars2  = explode("\n", $vars2);
+
+        function doUnixAgent($vars, $vars2) {
+            $ntpd	= array();
+            foreach ($vars as $item=>$value) {
+                if (!empty($value)) {
+                    $temp = explode(':', $value); //i changed this line
+                    if (isset($temp[1])) {
+                        $ntpd[trim($temp[0])] = trim($temp[1]);
+                   }
+                }
+            }
+            foreach ($vars2 as $item=>$value) {
+                if (!empty($value)) {
+                    $temp = explode(':', $value);
+                    if (isset($temp[1])) {
+                        $ntpd[trim($temp[0])] = trim($temp[1]);
+                    }
+                }
+            }
+            $var['version']                     = (isset($ntpd['Version']) ? $ntpd['Version'] : "N/A"); //changed it!
+            $var['stratum']                     = (isset($ntpd['Stratum']) ? $ntpd['Stratum'] : "U"); //changed it!
+            $var['offset']                      = (isset($ntpd['Offset']) ? $ntpd['Offset'] : "U");          //changed it!
+            $var['frequency']                   = (isset($ntpd['Frequency']) ? $ntpd[‘Frequency'] : "U"); //changed it!
+            if (isset($ntpd['clk_jitter'])) {
+                $var['jitter']                  = (isset($ntpd['clk_jitter']) ? $ntpd['clk_jitter'] : "U");
+                $var['noise']                   = (isset($ntpd['sys_jitter']) ? $ntpd['sys_jitter'] : "U");
+                $var['stability']               = (isset($ntpd['clk_wander']) ? $ntpd['clk_wander'] : "U");
+            } else {
+                $var['jitter']                  = (isset($ntpd['jitter']) ? $ntpd['jitter'] : "U");
+                $var['noise']                   = (isset($ntpd['noise']) ? $ntpd['noise'] : "U");
+                $var['stability']               = (isset($ntpd['stability']) ? $ntpd['stability'] : "U");
+            }
+            if (!empty($ntpdc) || $var['Stratum'] < 16) { //changed it so default values would go through
+                $var['server']                  = true;
+                $var['uptime']                  = (isset($ntpd['timesincereset']) ? $ntpd['timesincereset'] : "U");
+                $var['buffer_recv']             = (isset($ntpd['receivebuffers']) ? $ntpd['receivebuffers'] : "U");
+                $var['buffer_free']             = (isset($ntpd['freereceivebuffers']) ? $ntpd['freereceivebuffers'] : "U");
+                $var['buffer_used']             = (isset($ntpd['usedreceivebuffers']) ? $ntpd['usedreceivebuffers'] : "U");
+                $var['packets_drop']            = (isset($ntpd['droppedpackets']) ? $ntpd['droppedpackets'] : "U");
+                $var['packets_ignore']          = (isset($ntpd['ignoredpackets']) ? $ntpd['ignoredpackets'] : "U");
+                $var['packets_recv']            = (isset($ntpd['receivedpackets']) ? $ntpd['receivedpackets'] : "U");
+                $var['packets_sent']            = (isset($ntpd['packetssent']) ? $ntpd['packetssent'] : "U");
+            }
+            echo "<<<app-ntpd>>>\n";
+            foreach ($var as $item=>$count) {
+                echo $item.":".$count."\n";
+            }
+	}
+
+	doUnixAgent($vars, $vars2);
+
+?>
+
+———————————————————————————————————————————————————————
+start xinetd and check for errors
+[root@comp]$ systemctl start xinetd
+[root@comp]$ systemctl status xinetd
+
+Add the client to Observium
+#################################################################################
+
+
+cat /home/ignitehmi/.ignition/clientlauncher-data/vision-client-launcher.json | grep name | grep -v gateway | cut -b 16- | tr -d “[:punct:]”
+
+this is what the Plank dock file called google-chrome.dockitem contains:
+
+[PlankItemsDockItemPreferences]
+Launcher=file:///usr/share/applications/google-chrome.desktop
+
+
+
+
+
+
