@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=NMTUI
+GenericName=NetManagerTUI
+Comment=Network Manager Text User Interface
+Exec=sh -c "sudo nmtui"
+Terminal=true
+Type=Application
+Icon=network-wired-symbolic
