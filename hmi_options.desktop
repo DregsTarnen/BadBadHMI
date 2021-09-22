@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=HMI Options
+GenericName=hmi_options
+Comment=python app to set hmi options
+Exec=/home/rfphmi/hmioptions.py
+Terminal=false
+Type=Application
+Icon=preferences-other-symbolic
