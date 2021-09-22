@@ -18,6 +18,15 @@ vino-server
 dconf-editor
 plank
 ####################################################
+CRONTAB for the HMI
+####################################################
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+
+@reboot startx
+@reboot /home/rfphmi/runhmi.sh
+* * * * * /home/rfphmi/runhmi.sh
+####################################################
 POST MINIMAL INSTALL SETUP:
 after installing the minimal CentOS8 do the following:
 [root@comp]$ dnf check-update
@@ -53,6 +62,7 @@ look like the following:
      if [ -x /usr/bin/mwm ] ; then
 	  xset dpms 0 0 0 && xset s noblank && xset s off
 	  exec /usr/bin/mwm -multiscreen
+	  exec /usr/bin/plank -n dock1 &
      fi
 }
 
