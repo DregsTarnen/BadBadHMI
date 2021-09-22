@@ -16,12 +16,13 @@ google-chrome-stable_current_x86_64
 xinput_calibrator-0.7.5-3.el6.x86_64
 vino-server
 dconf-editor
+plank
 ####################################################
 POST MINIMAL INSTALL SETUP:
 after installing the minimal CentOS8 do the following:
 [root@comp]$ dnf check-update
 [root@comp]$ dnf update
-[root@comp]$ dnf install tar openmotif nano wget curl net-tools lsof bash-completion Xorg urw-fonts liberation-fonts xterm vino-server dconf-editor
+[root@comp]$ dnf install tar openmotif nano wget curl net-tools lsof bash-completion Xorg urw-fonts liberation-fonts xterm vino-server dconf-editor plank
 drink some coffee..........
 [root@comp]$ wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
 [root@comp]$ dnf localinstall goggle-chrome-stable_current_x86_64.rpm
